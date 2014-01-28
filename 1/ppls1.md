@@ -1,4 +1,4 @@
-### Q2
+### Q1
 
     int x = 10, y = 0;
     co
@@ -72,20 +72,25 @@ algorithm, and no credit will be given for doing so.
 
 
 Notes:
- * Rounds are simalar to the Interacting Peers Pattern
+ * In the mp impl, messages sent are deg(v) and rndvalue(v) and the first legal colour
+ * In the shared memory version this data is readable by everyone
+ * The expensive part of the program is ensuring the the processes remain in lockstep
+
+ * This is most simalar to the Interacting Peers Pattern
     * Same Program Multiple Data
+    * Each processor responsible for maintaining data about invlaid colours etc
+    * Use barriers to maintain syncronisation. Simalar to Jacboi algo... mentioned in lectures 
+
+    * Dealing with more tasks per node just means that a single processor has to preform the work of multiple nodes per round
+       * Sequentially
+       * Either threads to allow each task to be run in parallel
+       * Equlivent as long as long as the entire thing remains in lockstep
+
  * Could be implemented using bag of tasks, but doesn't fit that well
-    * Does have the advantage of allowing higher performance processors
- * The messages sent are deg(v) and rndvalue(v) and the first legal colour
- * In a multiple machine env these cannot be read and it is clear when a round starts and ends
- * In a shared memory environment these can be read at any time
- * Syncronisation is needed to allow rounds to be formatted
+    * Would need to use a master to schedule tasks
+    * Does have the advantage of implictly supporting more than one node per processor
+    * Allows different performance of nodes as faster nodes just process more tasks
+    * load distribution, deals better with nodes stopping
+    * node not tied to a processor
 
- * Dealing with more tasks per node just means that a single processor has to preform the work of multiple nodes per round
-    * Either threads to allow each task to be run in parallel
-    * Sequentially
-    * Equlivent as long as long as the entire thing remains in lockstep
- 
- * NOt the best of ideas, maybe use a better algo? Look into this
-
-
+ * Not the best of ideas, maybe use a better algo? Look into this
