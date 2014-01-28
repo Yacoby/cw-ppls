@@ -85,9 +85,9 @@ Unlike the message passing implementation all data is readable by all nodes whic
        * Either threads to allow each task to be run in parallel
        * Equlivent as long as long as the entire thing remains in lockstep
 
-This is most similar to the interacting peers pattern, as each node has some other number of nodes it interacts with. As with other algorithms that use rounds that use this pattern such as the Jacobi algorithm barriers would be used to enforce synchronisation between the rounds and ensure the algorithm runs in lockstep.
+This is most similar to the interacting peers pattern, as each node has some other number of nodes it interacts with. As with other algorithms that use rounds that use this pattern such as the Jacobi algorithm barriers would be used to enforce synchronisation between the rounds and ensure the algorithm runs in lockstep. This barrier would ensure that all processors wait until all active processors have entered the barrier, but given that it is possible for a node to complete (and so the algorithm on that node to terminate) care would have to be taken to ensure that the barrier only waited for active threads.
 
-If the algorithm was altered to allow for multiple node per processor then for each stage of the algorithm each processor would have to preform the tasks for some number of nodes >= 1. 
+If the algorithm was altered to allow for multiple node per processor then for each stage of the algorithm each processor would have to preform the tasks for some number of nodes >= 1. This would not present an issue as long as the total number of TODO
 
  * Could be implemented using bag of tasks, but doesn't fit that well
     * Would need to use a master to schedule tasks
@@ -96,10 +96,13 @@ If the algorithm was altered to allow for multiple node per processor then for e
     * load distribution, deals better with nodes stopping
     * node not tied to a processor
 
-It would also be possible to implement this use the bag of tasks pattern. This isn't quite as elegant and it would be slightly shoehorned in however it does allow have several distinct advantages, most notably the ability lack of a processor being tied to a set of nodes (which is possible due to shared memory between processors) and the ability to load balance between processor to minimize the waiting time if one processor differs in speed or is preforming other tasks.
+It would also be possible to implement this use the bag of tasks pattern. This isn't quite as elegant and it would be slightly shoehorned in however it does allow have several distinct advantages, most notably the ability lack of a processor being tied to a set of nodes (which is possible due to shared memory between processors) and the ability to load balance nodes between processors to minimize the waiting time if a processor is idle (due to all its nodes having been assigned a colour).
 
-% This would mean that there would be task sfor e
+Care would have to be taken to ensure that the task queue is ordered so that the tasks are processed in the correct order. Care would have to be taken to ensure that the tasks don't overrun and taks for a futher iteration started before all the tasks for the current iteration have finished.
 
-Notes:
+To enforce syncronisation either tasks that simply wait for all processors to enter a barrier would ensure TODO
 
+Using this menthod does mean that having multiple nodes per processor is trivial as the pattern doesn't make any assumption of which node belongs to which processor and so to support more nodes than processors is simply a matter of creating more tasks.
+
+ * In this case, neither the other two patterns metnioned in lectures makes any sense
  * Not the best of ideas, maybe use a better algo? Look into this
