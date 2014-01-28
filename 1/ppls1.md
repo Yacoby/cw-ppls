@@ -1,3 +1,4 @@
+### Q2
 
     int x = 10, y = 0;
     co
@@ -44,3 +45,47 @@ Treating C as C' and C'' (as there is both a read and an assignment and the oper
 Consider B' and B'' there should be no difference
 
 Consider A' and A''. Don't think it has an effect but need to ensure that this is case case.
+
+
+
+So finally (not considering A', B'') there are the following results
+
+    x = 8, y = 3
+    x = 8, y = 2
+    x = 0, y = 3
+    x = 0, y = 2
+    x -> -INF , y = 2 (Fail to terminate)
+
+    x = 2, y = 3
+    x = 8, y = 1
+    x = 0, y = 1
+
+
+
+### Q2
+
+Write a short report (of around a page) on such a shared variable version of the
+algorithm, discussing its relationship to any patterns, synchronisation requirements,
+and the issues which would arise if it were to be amended to allow for more nodes in
+the graph than processors. NB You are not being asked to write pseudo-code for the
+algorithm, and no credit will be given for doing so.
+
+
+Notes:
+ * Rounds are simalar to the Interacting Peers Pattern
+    * Same Program Multiple Data
+ * Could be implemented using bag of tasks, but doesn't fit that well
+    * Does have the advantage of allowing higher performance processors
+ * The messages sent are deg(v) and rndvalue(v) and the first legal colour
+ * In a multiple machine env these cannot be read and it is clear when a round starts and ends
+ * In a shared memory environment these can be read at any time
+ * Syncronisation is needed to allow rounds to be formatted
+
+ * Dealing with more tasks per node just means that a single processor has to preform the work of multiple nodes per round
+    * Either threads to allow each task to be run in parallel
+    * Sequentially
+    * Equlivent as long as long as the entire thing remains in lockstep
+ 
+ * NOt the best of ideas, maybe use a better algo? Look into this
+
+
