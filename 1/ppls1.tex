@@ -1,4 +1,13 @@
-\subsubsection{Q1}
+\documentclass[11pt,a4paper]{article}
+\usepackage{fullpage, parskip}
+
+\begin{document}
+
+\title{PPLS Coursework 1}
+\author{Jacob Essex\\s1040340}
+\maketitle
+
+\subsubsection*{Q1}
 
 \begin{verbatim}
 int x = 10, y = 0;
@@ -107,16 +116,14 @@ to impossible to analysis by hand.
 I couldn't find any cases where the lack of atomicity in lines A (due to
 two loads) and B caused a difference in output.
 
-\subsubsection{Q2}
+\newpage
+\subsubsection*{Q2}
 
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  In the mp impl, messages sent are deg(v) and rndvalue(v) and the first
-  legal colour
-\item
-  In the shared memory version this data is readable by everyone
-\end{itemize}
+%\begin{itemize}
+%    \itemsep1pt\parskip0pt\parsep0pt
+%    \item In the mp impl, messages sent are deg(v) and rndvalue(v) and the first legal colour
+%    \item In the shared memory version this data is readable by everyone
+%\end{itemize}
 
 In the message passing implementation of the algorithm each processor
 represents a node in the graph. Each processor holds internal state
@@ -136,33 +143,23 @@ and or if the data is processed at different speeds the algorithm could
 move out of lockstep and so one node could be several iterations ahead
 of other nodes thereby breaking the algorithm.
 
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  This is most simalar to the Interacting Peers Pattern
+%\begin{itemize}
+%\itemsep1pt\parskip0pt\parsep0pt
+%\item This is most simalar to the Interacting Peers Pattern
+%
+%  \begin{itemize}
+%  \item Same Program Multiple Data
+%  \item Each processor responsible for maintaining data about invlaid colours etc
+%  \item Use barriers to maintain syncronisation. Simalar to Jacboi algo\ldots{} mentioned in lectures
+%  \item Dealing with more tasks per node just means that a single processor has to preform the work of multiple nodes per round
+%  \item Sequentially
+%  \item Either threads to allow each task to be run in parallel
+%  \item Equlivent as long as long as the entire thing remains in lockstep
+%  \end{itemize}
+%\end{itemize}
 
-  \begin{itemize}
-  \item
-    Same Program Multiple Data
-  \item
-    Each processor responsible for maintaining data about invlaid
-    colours etc
-  \item
-    Use barriers to maintain syncronisation. Simalar to Jacboi
-    algo\ldots{} mentioned in lectures
-  \item
-    Dealing with more tasks per node just means that a single processor
-    has to preform the work of multiple nodes per round
-  \item
-    Sequentially
-  \item
-    Either threads to allow each task to be run in parallel
-  \item
-    Equlivent as long as long as the entire thing remains in lockstep
-  \end{itemize}
-\end{itemize}
-
-This is most similar to the interacting peers pattern, as each processor
+\paragraph{Interacting Peers} This is most similar to the interacting peers pattern,
+as each processor
 has some other number of processors it interacts with defined as defined
 by the graph. As with other iteration based algorithms that use this
 pattern such as the Jacobi algorithm an ideal way of synchronising the
@@ -176,65 +173,67 @@ only active processors need to enter the barrier.
 
 If the algorithm was altered to allow for multiple graph nodes per
 processor then for each stage of the algorithm each processor would have
-to preform each the tasks for some number of nodes \textgreater{}= 1.
+to preform each the tasks for some number of nodes >= 1. 
 
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  Could be implemented using bag of tasks, but doesn't fit that well
+It is possible that having multiple nodes per processor would be a significant benefit as
+due to the number of barriers a significant amount of time would be spent synchronizing.
+I would make the assumption that in many cases having a single processor processing 20 nodes is
+faster than 20 processors each processing 1 node.
 
-  \begin{itemize}
-  \itemsep1pt\parskip0pt\parsep0pt
-  \item
-    Would need to use a master to schedule tasks
-  \item
-    Does have the advantage of implictly supporting more than one node
-    per processor
-  \item
-    Allows different performance of nodes as faster nodes just process
-    more tasks
-  \item
-    load distribution, deals better with nodes stopping
-  \item
-    node not tied to a processor
-  \end{itemize}
-\end{itemize}
+%\begin{itemize}
+%\itemsep1pt\parskip0pt\parsep0pt
+%\item
+%  Could be implemented using bag of tasks, but doesn't fit that well
+%
+%  \begin{itemize}
+%  \itemsep1pt\parskip0pt\parsep0pt
+%  \item Would need to use a master to schedule tasks
+%  \item Does have the advantage of implictly supporting more than one node per processor
+%  \item Allows different performance of nodes as faster nodes just process more tasks
+%  \item load distribution, deals better with nodes stopping
+%  \item node not tied to a processor
+%  \end{itemize}
+%\end{itemize}
 
-It would also be possible to implement this use the bag of tasks
+\paragraph{Bag of tasks} It would also be possible to implement this use the bag of tasks
 pattern. This isn't quite as elegant and it would be slightly shoehorned
-in however it does allow have several distinct advantages, most notably
-the ability lack of a processor being tied to a set of nodes (which is
-possible due to shared memory between processors) and the ability to
-load balance nodes between processors to minimize the waiting time if a
-processor is idle (due to all its nodes having been assigned a colour).
+in however it does have several distinct advantages, most notably
+the lack of a node (or set of nodes) being assigned to a single processor
+which is possible due to shared memory between processors. This in turn allows
+load balancing work between processors to minimize the waiting time if a
+processor is idle (due to all its nodes having been assigned a colour) and is able
+to deal better with a multiprogramming environment (such as the OS needing to use cycles).
 
 Care would have to be taken to ensure that the task queue is ordered so
-that the tasks are processed in the correct order. Any system implanting
-this would have to be taken to ensure that the tasks don't overrun and
-tasks for a further iteration started before all the tasks for the
-current iteration have finished. This could be implemented by a bag of
-tasks that has some understanding of the task and so requires all
-processors to be waiting for a task before the next iterations tasks are
-made available.
+that the steps are processed in the correct order. Any system implanting
+this would have to be taken to ensure that that tasks for a further step of the algorithm are not
+started before all the tasks for the current step have finished.  The simplest method that I can see is that the bag of tasks has some understanding of the task and so requires all processors to be waiting for a task before tasks to preform the next step are made available.
 
-Using this method does mean that having multiple nodes per processor is
-trivial as the pattern doesn't make any assumption of which node belongs
-to which processor and so to support more nodes than processors is
-simply a matter of creating more tasks.
+Given that there is a central bag of tasks then the overhead of having a single 
+processor processing for each node would be extremely inefficient as waiting for 
+and getting a task could quite conceivable take longer than the task itself.
 
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  In this case, neither the other two patterns metnioned in lectures
-  makes any sense
+However using this method does mean that having multiple nodes per processor is trivial as the pattern doesn't make any assumption of which node belongs to which processor and so to support more nodes than processors is simply a matter of creating more tasks. This would then allow each processor to get large numbers of tasks from the bag of tasks thereby reducing the inefficacies of having a single point allocating tasks.
 
-  \begin{itemize}
-  \itemsep1pt\parskip0pt\parsep0pt
-  \item
-    Producer and consumer
-  \item
-    Pipeline
-  \end{itemize}
-\item
-  Not the best of ideas, maybe use a better algo? Look into this
-\end{itemize}
+%\begin{itemize}
+%\itemsep1pt\parskip0pt\parsep0pt
+%\item In this case, neither the other two patterns metnioned in lectures makes any sense
+%
+%  \begin{itemize}
+%  \itemsep1pt\parskip0pt\parsep0pt
+%  \item Producer and consumer
+%  \item Pipeline
+%  \end{itemize}
+%\item Not the best of ideas, maybe use a better algo? Look into this
+%\end{itemize}
+
+
+\paragraph{Other patterns}
+Of two other patterns mentioned in the lecture, non of them make much sense to apply in this case.  
+
+The pipeline pattern makes very lite sense given there is no linear process that the data will follow.
+
+While each process does produce data that is sent to another process, it doesn't fit the producer consumer model as the data flow is multi-way, i.e. each producer is also a consumer. There is also no need for the standard producer consumer pattern (of for example having a circular buffer) as the algorithm works in such a way that synchronisation is achieved by the algorithm ensuring that running each processor runs each step in lockstep.
+
+
+\end{document}
