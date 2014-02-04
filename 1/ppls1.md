@@ -17,6 +17,8 @@ Investigating the program we find that there are the following paths through the
 Path are represented in a simalar way to regex, in that (A,B)\* means 0 or more iterations of A followed by B
 Where a line isn't an atomic operation, C represents all operations on the line but  C' is the operation, C'' the second operation etc
 
+In many cases there are a large number of possible paths to the output. While I have hopefully listed all possible outputs the paths given are just an example of how to reach that output
+
 First considering only simple paths through the program that treat the loop (A,B) and all lines as atomic we find the following ouputs and paths:
 
     x = 8, y = 3: (A,B)*, D, E, F, C
@@ -25,9 +27,9 @@ First considering only simple paths through the program that treat the loop (A,B
     x = 0, y = 3: (A,B)*, D, E, (A,B)*, F, C
     x = 0, y = 2: (A,B)*, D, E, (A,B)*, C, F
 
-    x = 0, y = 1 (and fail to terminate): (A, B)*, C, D
+    x = 0, y = 1 (fail to terminate): (A, B)*, C, D
 
-The result where x = 0, y = 1 fails to terminate due to the condition for D not being able to be met.
+The result where x = 0, y = 1 fails to terminate due to the condition for line D not being able to be met.
 
 Lines C and B are clearly not atomic as they are actually both a read and a write. Representing the operation in some form of asmembly languge may give something such as follows:
 
@@ -43,74 +45,23 @@ The add is not observable to other processors, so in our considerations we can r
     Add r1, 1
     Store r1, @x ##B''
 
-This means that other operations on the variable can be interleaved between the read and the write. As mentioned above the notation used is that the operation C is in fact two operations, C and C'
+This means that other operations on the variable can be interleaved between the read and the write. As mentioned above the notation used is that the operation C is in fact two operations, C and C'. Considering this along 
 
     x = 8, y = 1: (A, B)*, D, E, C', F, C''
-    x -> -INF , y = 2: (A, B)*, D, E, (A, B)*, F, (A, B)*, C
-    x = 2, y = 3: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*, C
     x = 0, y = 1: (A, B)*, B, D, E, (A,B)*, C', F, C''
 
-The following examples are very dependant on the ordering of what 
+There is also the case when line F sets y to a value greater than x causing an infinite loop. Depending on the model there is of course the chance that x will underflow but I assume that we are dealing with a language that has integers that are not bounded by word length.
+
+    x -> -INF , y = 2: (A, B)*, D, E, (A, B)*, F, (A, B)*, C
+
+The following examples are very dependant on the points at which the interleaving happens. For example if at the point at the point F is executed x is less than 2 then the program will fail to terminate with x tending to minus infinity. This leads to the same set of answers as one of the above paths but just uses a slightly more complex path to reach the result
 
     x = 2, y = 3: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*, C 
-    x -> -INF, y = 2: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*
 
 
-Of course this is not the only set of paths. The code we were considering was unoptimized and so maintined its order. Due to things such as superscaler execution and reordering, loop unrolling etc I would suspect that the actual possible outputs are far larger and also compiler and machine dependant. I also expcet that this would be close to impossible to analysise by hand
+Of course this is not the only set of paths. The code we were considering was unoptimized and so maintained its order. Due to things such as super scaler execution and reordering, loop unrolling etc. I would suspect that the actual possible outputs are far larger and also compiler and machine dependant. I also expect that this would be close to impossible to analysis by hand.
 
-
-OLD:
-So there are the following paths through the program:
-
-    E, F, (A, B)*, C - (NOT POSSIBLE)
-    E, (A, B)*, C, F - (NOT POSSIBLE)
-    E, (A, B)*, F, C - (NOT POSSIBLE)
-    (A, B)*, E, F, C - x = 8, y = 3
-    (A, B)*, E, C, F - x = 8, y = 2
-    (A, B)*, C, D, - x = 0, y = 1 AND HANG
-
-    E, (A, B)*, F, (A, B)*, C - (NOT POSSIBLE)
-    (A, B)*, E, (A, B)*, F, C - x = 0, y = 3
-    (A, B)*, E, (A, B)*, C, F - x = 0, y = 2
-    (A, B)*, E, (A, B)*, F, (A, B)*, C - (FAIL TO TERMINATE, y = 2, x -> -INF)
-
-    E, (A, B)* A, F, B, (A, B)*, C - (NOT POSSIBLE)
-    (A, B)*, A, E, B, (A, B)*, F, C - No difference from previous
-    (A, B)*, A, E, B, (A, B)*, C, F - No difference from previous
-
-    (A, B)*, A, E, B, (A, B)*, F, (A, B)*, C
-    (A, B)*, A, E, B, (A, B)*, A, F, B, (A, B)*, C
-    (A, B)*, E, (A, B)*, A, F, B, (A, B)*, C - Can fail to terminate, can lead to x = 2, y = 3
-
-NB: Think I have missed something. There should be x = 2, y = 2 (+-1). EDIT: Nope, don't think so?
-
-Treating C as C' and C'' (as there is both a read and an assignment and the operation isn't atomic gives an additional path that results in a distinct result)
-
-    (A, B)*, E, C', F, C'' - x = 8, y = 1
-    (A, B)*, B, E, (A,B)*, C', F, C'' - x = 0, y = 1
-
-Consider B' and B'' there should be no difference
-
-Consider A' and A''. Don't think it has an effect but need to ensure that this is case case.
-
-
-
-So finally (not considering A', B'') there are the following results
-
-    x = 8, y = 3
-    x = 8, y = 2
-    x = 0, y = 3
-    x = 0, y = 2
-    x -> -INF , y = 2 (Fail to terminate)
-
-    x = 2, y = 3
-    x = 8, y = 1
-    x = 0, y = 1
-    x = 0, y = 1 (and hang)
-
-
-
-
+I couldn't find any cases where the lack of atomicity in lines A (due to two loads) and B caused a difference in output.
 
 ### Q2
 
