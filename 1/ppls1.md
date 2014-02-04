@@ -65,14 +65,12 @@ I couldn't find any cases where the lack of atomicity in lines A (due to two loa
 
 ### Q2
 
-Write a short report (of around a page) on such a shared variable version of the algorithm, discussing its relationship to any patterns, synchronisation requirements, and the issues which would arise if it were to be amended to allow for more nodes in the graph than processors. NB You are not being asked to write pseudo-code for the algorithm, and no credit will be given for doing so.
-
  * In the mp impl, messages sent are deg(v) and rndvalue(v) and the first legal colour
  * In the shared memory version this data is readable by everyone
 
-In the message passing implementation of the algorithm each processor represents a node in the graph. Each processor holds internal state about the node $v$ such as the list of colours it cannot be. At each iteration of the algorithm if the node hasn't yet been allocated a colour the processor sends deg(v), rndvalue(v) and its choice of colour to all its neighbours. 
+In the message passing implementation of the algorithm each processor represents a node in the graph. Each processor holds internal state about the node $v$ such as the list of colours it that it is impossible for the node to be. At each iteration of the algorithm if the node hasn't yet been allocated a colour the processor sends deg(v), rndvalue(v) and its choice of colour to all its neighbours and preforms analysis on that data.
 
-Unlike the message passing implementation all data is readable by all nodes which means that rather than nodes sending data to receiving nodes, the receiving nodes would just read the data themselves. This leads to the problem that it is possible for the receiving node to read data in an inconsistent state and or if the data is processed at different speeds the algorithm could move out of lockstep and so one node could be several iterations ahead of other nodes thereby breaking the algorithm.
+This presented algorithm multiple iterations, where each iteration is made up of a defined number stages. Unlike the message passing implementation all data is readable by all nodes which means that rather than nodes sending data to receiving nodes, the receiving nodes would just read the data themselves. This leads to the problem that it is possible for the receiving node to read data in an inconsistent state and or if the data is processed at different speeds the algorithm could move out of lockstep and so one node could be several iterations ahead of other nodes thereby breaking the algorithm.
 
  * This is most simalar to the Interacting Peers Pattern
     * Same Program Multiple Data
@@ -84,9 +82,9 @@ Unlike the message passing implementation all data is readable by all nodes whic
        * Either threads to allow each task to be run in parallel
        * Equlivent as long as long as the entire thing remains in lockstep
 
-This is most similar to the interacting peers pattern, as each processor has some other number of processors it interacts with defined as defined by the graph. As with other iteration based algorithms that use this pattern such as the Jacobi algorithm an ideal way of sycronising the processors is to use  barriers to ensure the algorithm runs in lockstep. This barrier would ensure that all processors wait until all active processors have entered the barrier, but given that it is possible for a node to be allocated a colour and so not need to preform any further processing care should be taken that only active processors need to enter the barrier.
+This is most similar to the interacting peers pattern, as each processor has some other number of processors it interacts with defined as defined by the graph. As with other iteration based algorithms that use this pattern such as the Jacobi algorithm an ideal way of synchronising the processors is to use  barriers to ensure the algorithm runs in lockstep and every processor remains at the same stage and iteration of the algorithm as every other processor.  This barrier would ensure that all processors wait until all active processors have entered the barrier, but given that it is possible for a node to be allocated a colour and so not need to preform any further processing care should be taken that only active processors need to enter the barrier.
 
-If the algorithm was altered to allow for multiple graph nodes per processor then for each iteration of the algorithm each processor would have to preform each the tasks for some number of nodes >= 1.
+If the algorithm was altered to allow for multiple graph nodes per processor then for each stage of the algorithm each processor would have to preform each the tasks for some number of nodes >= 1.
 
  * Could be implemented using bag of tasks, but doesn't fit that well
     * Would need to use a master to schedule tasks
