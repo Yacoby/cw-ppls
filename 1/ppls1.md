@@ -12,6 +12,54 @@
         y = 2; ##F
     oc
 
+Investigating the program we find that there are the following paths through the program. 
+
+Path are represented in a simalar way to regex, in that (A,B)\* means 0 or more iterations of A followed by B
+Where a line isn't an atomic operation, C represents all operations on the line but  C' is the operation, C'' the second operation etc
+
+First considering only simple paths through the program that treat the loop (A,B) and all lines as atomic we find the following ouputs and paths:
+
+    x = 8, y = 3: (A,B)*, D, E, F, C
+    x = 8, y = 2: (A,B)*, D, E, C, F
+
+    x = 0, y = 3: (A,B)*, D, E, (A,B)*, F, C
+    x = 0, y = 2: (A,B)*, D, E, (A,B)*, C, F
+
+    x = 0, y = 1 (and fail to terminate): (A, B)*, C, D
+
+The result where x = 0, y = 1 fails to terminate due to the condition for D not being able to be met.
+
+Lines C and B are clearly not atomic as they are actually both a read and a write. Representing the operation in some form of asmembly languge may give something such as follows:
+
+    Load @x, r1
+    Add r1, 1
+    Store r1, @x
+
+Clearly other commands can be interleaved between these three commands, leading to inconsistencies, so we cannot consider just a single thread.
+
+The add is not observable to other processors, so in our considerations we can reduce the complexity of our considerations by just considering the observable events such for B and C, i.e. load and store. We labeled these as B' and B'' or C' and C'' for B and C respectively.
+
+    Load @x, r1 ##B'
+    Add r1, 1
+    Store r1, @x ##B''
+
+This means that other operations on the variable can be interleaved between the read and the write. As mentioned above the notation used is that the operation C is in fact two operations, C and C'
+
+    x = 8, y = 1: (A, B)*, D, E, C', F, C''
+    x -> -INF , y = 2: (A, B)*, D, E, (A, B)*, F, (A, B)*, C
+    x = 2, y = 3: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*, C
+    x = 0, y = 1: (A, B)*, B, D, E, (A,B)*, C', F, C''
+
+The following examples are very dependant on the ordering of what 
+
+    x = 2, y = 3: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*, C 
+    x -> -INF, y = 2: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*
+
+
+Of course this is not the only set of paths. The code we were considering was unoptimized and so maintined its order. Due to things such as superscaler execution and reordering, loop unrolling etc I would suspect that the actual possible outputs are far larger and also compiler and machine dependant. I also expcet that this would be close to impossible to analysise by hand
+
+
+OLD:
 So there are the following paths through the program:
 
     E, F, (A, B)*, C - (NOT POSSIBLE)
@@ -19,7 +67,7 @@ So there are the following paths through the program:
     E, (A, B)*, F, C - (NOT POSSIBLE)
     (A, B)*, E, F, C - x = 8, y = 3
     (A, B)*, E, C, F - x = 8, y = 2
-    (A, B)*, C, E, F - x = 8, y = 2
+    (A, B)*, C, D, - x = 0, y = 1 AND HANG
 
     E, (A, B)*, F, (A, B)*, C - (NOT POSSIBLE)
     (A, B)*, E, (A, B)*, F, C - x = 0, y = 3
@@ -58,6 +106,10 @@ So finally (not considering A', B'') there are the following results
     x = 2, y = 3
     x = 8, y = 1
     x = 0, y = 1
+    x = 0, y = 1 (and hang)
+
+
+
 
 
 ### Q2
