@@ -5,6 +5,7 @@
 
 \title{PPLS Coursework 1}
 \author{Jacob Essex\\s1040340}
+\date{}
 \maketitle
 
 \subsubsection*{Q1}
@@ -23,17 +24,14 @@ co
 oc
 \end{verbatim}
 
-Investigating the program we find that there are the following paths
-through the program.
-
-Path are represented in a simalar way to regex, in that (A,B)* means 0
-or more iterations of A followed by B Where a line isn't an atomic
-operation, C represents all operations on the line but C' is the
-operation, C'' the second operation etc
+Path are represented in a simalar way to a regular expression, in that (A,B)* means 0
+or more iterations of A followed by B. Where a line isn't an atomic
+operation, C represents the occurence of all operations on the line. C' represents the occurence
+of the first operation, C'' the second operation etc.
 
 In many cases there are a large number of possible paths to the output.
 While I have hopefully listed all possible outputs the paths given are
-just an example of how to reach that output
+just an example of how a given output could be reached.
 
 First considering only simple paths through the program that treat the
 loop (A,B) and all lines as atomic we find the following ouputs and
@@ -49,11 +47,11 @@ x = 0, y = 2: (A,B)*, D, E, (A,B)*, C, F
 x = 0, y = 1 (fail to terminate): (A, B)*, C, D
 \end{verbatim}
 
-The result where x = 0, y = 1 fails to terminate due to the condition
-for line D not being able to be met.
+The result where $x = 0$, $y = 1$ fails to terminate due to the condition
+for line D not being wait. So the second block (D, E, F)
 
 Lines C and B are clearly not atomic as they are actually both a read
-and a write. Representing the operation in some form of asmembly languge
+and a write. Representing the operation in some hypothetical form of assembly language
 may give something such as follows:
 
 \begin{verbatim}
@@ -67,8 +65,8 @@ leading to inconsistencies, so we cannot consider just a single thread.
 
 The add is not observable to other processors, so in our considerations
 we can reduce the complexity of our considerations by just considering
-the observable events such for B and C, i.e.~load and store. We labeled
-these as B' and B'`or C' and C'' for B and C respectively.
+the observable events such for B and C, i.e. load and store. We labeled
+these as B' and B' or C' and C'' for B and C respectively. So for B:
 
 \begin{verbatim}
 Load @x, r1 ##B'
@@ -76,45 +74,47 @@ Add r1, 1
 Store r1, @x ##B''
 \end{verbatim}
 
-This means that other operations on the variable can be interleaved
-between the read and the write. As mentioned above the notation used is
-that the operation C is in fact two operations, C and C'. Considering
-this along
+%This means that other operations on the variable can be interleaved
+%between the read and the write. As mentioned above the notation used is
+%that the operation C is in fact two operations, C and C'. Considering
+%this along
+Looking at paths assuming C is split into multiple operations gives the following
+possible paths through the program:
 
 \begin{verbatim}
 x = 8, y = 1: (A, B)*, D, E, C', F, C''
 x = 0, y = 1: (A, B)*, B, D, E, (A,B)*, C', F, C''
 \end{verbatim}
 
-There is also the case when line F sets y to a value greater than x
+There is also the case when line F sets $y$ to a value greater than $x$
 causing an infinite loop. Depending on the model there is of course the
-chance that x will underflow but I assume that we are dealing with a
+eventual result that $x$ will underflow but I assume that we are dealing with a
 language that has integers that are not bounded by word length.
 
 \begin{verbatim}
 x -> -INF , y = 2: (A, B)*, D, E, (A, B)*, F, (A, B)*, C
 \end{verbatim}
 
-The following examples are very dependant on the points at which the
+The following example is very dependant on the points at which the
 interleaving happens. For example if at the point at the point F is
-executed x is less than 2 then the program will fail to terminate with x
+executed $x$ is less than $2$ then the program will fail to terminate with $x$
 tending to minus infinity. This leads to the same set of answers as one
 of the above paths but just uses a slightly more complex path to reach
 the result
 
 \begin{verbatim}
-x = 2, y = 3: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*, C 
+x = 2, y = 3: (A, B)*, D, E, (A, B)*, A, F, B, (A, B)*, C
 \end{verbatim}
 
-Of course this is not the only set of paths. The code we were
-considering was unoptimized and so maintained its order. Due to things
-such as super scaler execution and reordering, loop unrolling etc. I
+I couldn't find any cases where the lack of atomicity in lines A (due to two loads)
+and B caused a difference in output.
+
+Of course this is not the only set of paths. The code we are
+considering is assumed to be unoptimized and so the code maintains its order. Due to things
+such as super scaler execution and reordering, loop unrolling etc I
 would suspect that the actual possible outputs are far larger and also
 compiler and machine dependant. I also expect that this would be close
-to impossible to analysis by hand.
-
-I couldn't find any cases where the lack of atomicity in lines A (due to
-two loads) and B caused a difference in output.
+to impossible to analyise by hand.
 
 \newpage
 \subsubsection*{Q2}
@@ -133,7 +133,7 @@ hasn't yet been allocated a colour the processor sends deg(v),
 rndvalue(v) and its choice of colour to all its neighbours and preforms
 analysis on that data.
 
-This presented algorithm multiple iterations, where each iteration is
+This presented algorithm uses multiple iterations, where each iteration is
 made up of a defined number stages. Unlike the message passing
 implementation all data is readable by all nodes which means that rather
 than nodes sending data to receiving nodes, the receiving nodes would
