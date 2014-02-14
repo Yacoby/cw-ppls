@@ -1,7 +1,7 @@
 
-aquad: aquad.c
-	 mpicc --std=c99 -Wall -o aquad aquad.c stack.h stack.c -lm
+aquadA: aquadPartA.c
+	 mpicc --std=c99 -Wall -o aquadPartA aquadPartA.c stack.h stack.c -lm
 
-aquad_run: aquad
-	mpirun -c 5 ./aquad
+aquadA_run: aquadA
+	mpirun -c 5 ./aquadPartA
 
