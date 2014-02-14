@@ -29,7 +29,7 @@ void worker(int);
 
 int main(int argc, char** argv ) {
     int i, myid, numprocs;
-    double area, a, b;
+    double area;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
@@ -126,9 +126,7 @@ double farmer(int numprocs) {
 }
 
 void worker(int mypid) {
-    int task, result, tag;
     MPI_Status status;
-    bool first = true;
 
     while ( true ){
         MPI_Probe(FARMER_ID, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
