@@ -1,3 +1,14 @@
+/**
+ * This version is much simpler than Part A.
+ *
+ * For each worker the farmer sends a range to work on. The worker
+ * then 
+ *
+ * Using the fact that all tasks need to finish for the farmer to compute the
+ * result there is no need to continously poll to see )
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

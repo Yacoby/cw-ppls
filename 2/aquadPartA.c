@@ -36,6 +36,13 @@
  * different sized data is sent between processes so that it is required to get the
  * type of the message before it is possible to know how much data to receive (i.e.
  * the arguments to MPI_Recv)
+ *
+ *
+ * I did consider using MPI_Isend but it isn't viable as the send buffer needs to
+ * be freed after the MPI_Isend call at which point it may still be being used. Didn't seem
+ * to make any performance difference
+ *
+ * Why I used MPI_Recv ?????
  */
 
 
@@ -157,6 +164,7 @@ double farmer(int numprocs) {
                     ++tasks_per_process[i];
                     workingTasks[status.MPI_SOURCE] = true;
                     MPI_Send(work, 2, MPI_DOUBLE, i, TAG_WORK, MPI_COMM_WORLD);
+                    free(work);
                 }
             }
         }
