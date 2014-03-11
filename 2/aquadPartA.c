@@ -146,9 +146,8 @@ double farmer(int numprocs) {
 
     int numWorkingTasks = 0;
 
-    //allow indexing by processor id without allocating memory for the farmer (proc 0)
-    bool* workingTasks = calloc(numprocs - 1, sizeof(bool)) - 1;
-    double** buffers = calloc(numprocs - 1, sizeof(double*)) - 1;
+    bool* workingTasks = calloc(numprocs, sizeof(bool));
+    double** buffers = calloc(numprocs, sizeof(double*));
 
     stack* work_stack = new_stack();
 
@@ -204,6 +203,8 @@ double farmer(int numprocs) {
     for ( int i = 0; i < numprocs; ++i ){
         free(buffers[i]);
     }
+    free(buffers);
+    free(workingTasks);
 
     //when the task has finished we need to send a command to the workers for
     //them to halt.
