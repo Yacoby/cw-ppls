@@ -53,20 +53,6 @@
  * that it could do instead). When sending data it needs to wait for a task from the worker
  * in response to its message so blocking until the buffer is availble for use again doesn't
  * cause a delay.
- *
- *
- * Finally it is worth noting that I wrote this algorithm as I think was wanted for the
- * assignment. In reallity I would probably start off writing someting simalar to Part B
- * but attempt to implement task stealing on top of it as the majority of the work
- * seems to be the overhead is the message passing. I tried various experiments to reduce
- * the delay (such as sending 2 tasks to each process so that there isn't a delay in waiting
- * for the farmer to allocate a new message) but non of them had a major impact. 
- *
- * Although this assumption about message passing being the overhead may be invalid as there 
- * may be other causes such as the overhead of creating the pipes for MPI taking a long time.
- * If I had more time I woudl have taken a profiler to the program rather than trying to guess.
- *
- * The sequentail version was far far faster than either of the tasks using MPI.
  */
 
 
@@ -146,7 +132,10 @@ double farmer(int numprocs) {
 
     int numWorkingTasks = 0;
 
+    //holds if a process is working on something
     bool* workingTasks = calloc(numprocs, sizeof(bool));
+
+    //holds the buffers so that non blocking commands can be used
     double** buffers = calloc(numprocs, sizeof(double*));
 
     stack* work_stack = new_stack();

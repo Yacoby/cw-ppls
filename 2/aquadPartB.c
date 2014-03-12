@@ -98,6 +98,7 @@ int main(int argc, char** argv ) {
 }
 
 double farmer(int numprocs) {
+    //build the data to send to each process
     double* data = (double*)calloc(numprocs*2, sizeof(double));
     const int splits = numprocs - 1;
     for ( int i = 1; i < numprocs; ++i ){
