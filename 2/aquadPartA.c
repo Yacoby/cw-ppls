@@ -208,7 +208,7 @@ double farmer(int numprocs) {
     }
     free(buffers);
     free(workingTasks);
-    free_stack(workStack)
+    free_stack(workStack);
 
     //when the task has finished we need to send a command to the workers for
     //them to halt.
