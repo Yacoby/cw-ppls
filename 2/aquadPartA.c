@@ -74,10 +74,10 @@
 
 #define FARMER_ID 0
 
-#define TAG_HALT 0x1 //Sent to workers when needed to halt
-#define TAG_WORK 0x2
-#define TAG_MORE 0x2 //Sent from workers to the farmer with more tasks to do
-#define TAG_RESULT 0x3 //Sent from workers to farmers with a partial result
+#define TAG_HALT 1 //Sent from farmer to workers when needed to halt
+#define TAG_WORK 2 //Send from farmer to workers with work to do
+#define TAG_MORE 3 //Sent from workers to the farmer with more tasks to do
+#define TAG_RESULT 4 //Sent from workers to farmers with a partial result
 
 int* tasks_per_process;
 
@@ -127,6 +127,7 @@ int main(int argc, char** argv ) {
 }
 
 double farmer(int numprocs) {
+    //unused but a required for a argument. Out here so that it doesn't go out of scope
     MPI_Request ignored_request;
     double totalArea = 0;
 
@@ -237,7 +238,7 @@ void worker(int mypid) {
             //domain knowledge to split up the data in to the following tasks
             //(left, mid) and (mid, right)
             double response[3] = {left, mid, right};
-            MPI_Send(response, 3, MPI_DOUBLE, FARMER_ID, TAG_MORE,MPI_COMM_WORLD);
+            MPI_Send(response, 3, MPI_DOUBLE, FARMER_ID, TAG_MORE, MPI_COMM_WORLD);
         }else{
             double total = larea + rarea;
             MPI_Send(&total, 1, MPI_DOUBLE, FARMER_ID, TAG_RESULT, MPI_COMM_WORLD);
