@@ -1,14 +1,14 @@
 /**
- * This version is much simpler than Part A.
+ * Again this needs to be compiled with the -std=c99 flag. For example on DICE this is:
+ *  /usr/lib64/openmpi/bin/mpicc -std=c99 -o aquadPartB aquadPartB.c
  *
- * For each worker the farmer sends a range to work on. The worker
- * then sends back the total area and the number of iterations of quad per process
+ * Three MPI primitives are used: MPI_Scatter, MPI_Gather and MPI_Reduce.
  *
- * Three primitives are used: MPI_Scatter, MPI_Gather and MPI_Reduce.
- *
- * The farmer array is built containing the work for each process
+ * The farmer builds an array containing the work for each process. This is a length 2 array
+ * containing the range to compute the area of.
  *
  * MPI_Scatter is used to distribute work to all worker processes.
+ *
  * Each worker then does the work assigned using the quad function
  *
  * MPI_Reduce is then used to sum everything into a single variable using the MPI_SUM
@@ -19,7 +19,7 @@
  *
  * MPI_Scatter and MPI_Gather were used as they fitted the model. It would have also 
  * better possible to use MPI_Send and MPI_Recv for each process but this would have
- * just been doing the same thing as Scatter Gather but (probably) worse.
+ * just been doing the same thing as a Scatter Gather but (probably) worse.
  *
  * MPI_Reduce was used to gather all the areas and sum them together. This was instead of
  * sending the timing data back from the workers to the farmer using MPI_Gather. This seemed
@@ -98,7 +98,8 @@ int main(int argc, char** argv ) {
 }
 
 double farmer(int numprocs) {
-    //build the data to send to each process
+    //build the data to send to each process, due to the use of MPI_Scatter this
+    //has to be done for each process before MPI_Scatter is called.
     double* data = (double*)calloc(numprocs*2, sizeof(double));
     const int splits = numprocs - 1;
     for ( int i = 1; i < numprocs; ++i ){
@@ -109,7 +110,7 @@ double farmer(int numprocs) {
     MPI_Scatter(data, 2, MPI_DOUBLE, data, 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     free(data);
 
-    //with these functions the root process has to send, exploits the fact that the first items of
+    //with these functions the root process has to send, so we exploit the fact that the first items of
     //data are always 0
     double totalArea = 0;
     MPI_Reduce(data, &totalArea, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -138,7 +139,6 @@ double quad(double left, double right, double fleft, double fright, double lrare
 
 void worker(int mypid) {
     double data[2];
-
     MPI_Scatter(NULL, 0, MPI_DOUBLE, data, 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     double a = data[0];

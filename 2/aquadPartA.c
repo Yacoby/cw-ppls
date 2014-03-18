@@ -1,6 +1,9 @@
-/**
+/** * This needs to be compiled with the -std=c99 flag. For example on DICE this is:
+ *  /usr/lib64/openmpi/bin/mpicc -std=c99 -o aquadPartA aquadPartA.c stack.h stack.c
+ *
+ *
  * The farmer sends an initial item of work to a single worker to start processing. This uses
- * MPI_Send over MPI_Isend as there is nothing else that will need to be done until work has completed
+ * MPI_Send as opposed to MPI_Isend as there is nothing else that will need to be done until work has completed
  * so blocking until the buffer is free is fine.
  *
  *
@@ -8,8 +11,9 @@
  * different sized data is sent between processes so that it is required to get the
  * type of the message before it is possible to know how much data to receive (i.e.
  * what the count argument needs to be for MPI_Recv). This could have been worked around
- * by padding the data sent with TAG_RESULT but that seemed inelegant. The blocking verions
- * were used as using the non blocking versions wouldn't have given any advantage.
+ * by padding the data sent with TAG_RESULT but that seemed inelegant. The blocking versions
+ * were used as using the non blocking versions wouldn't have given any advantage. They would
+ * have had to busy wait which is worse than blocking.
  *
  *
  * To reduce the complexity of the program rather than have a worker send a message
@@ -41,18 +45,28 @@
  * then needs to be stored until it is known that MPI_Isend has finished with the buffer.
  * Rather than fafing with checking this it is assumed (a valid assumption) that the buffer is finished
  * with when we get the next result from the worker at which point it is freed. This
- * didn't make much (if any) preformance difference possibly due to the fact that the buffer
- * is so small. Also as covered futher on in this document the overhead isn't waiting for MPI_Send
+ * didn't make much (if any) performance difference possibly due to the fact that the buffer
+ * is so small.
  *
  *
  * The worker preforms the work of the algorithm, taking two input values and either
  * producing a single result to add to the total or sends a (single) message with
  * two new tasks to preform to the farmer. The farmer sends a message to the worker to halt
  * when the algorithm finishes running. The worker uses the blocking versions of Probe, Recv and
- * Send. When receving data there is no harm in blocking (if there is no data there is nothing
+ * Send. When receiving data there is no harm in blocking (if there is no data there is nothing
  * that it could do instead). When sending data it needs to wait for a task from the worker
- * in response to its message so blocking until the buffer is availble for use again doesn't
+ * in response to its message so blocking until the buffer is available for use again doesn't
  * cause a delay.
+ *
+ * 
+ * In no case was MPI_Bsend used. This is because it provided no advantage over MPI_Isend
+ * but added additional complexity. MPI_Bsend requires the user to define the buffer space 
+ * (via MPI_Buffer_Attach) and because of this allows the reuse of the send buffer.
+ * There is no need to reuse the send buffer, due to the send buffer being allocated on the heap
+ * and being able to deallocate when we are sure that it has been used without adding any
+ * additional complexity. Because of this reason MPI_Isend is preferred over MPI_Bsend
+ * because the additional complexity of allocating buffers(MPI_Buffer_attach) with MPI_Bsend
+ * for no gain.
  */
 
 
@@ -139,7 +153,7 @@ double farmer(int numprocs) {
     //holds the buffers so that non blocking commands can be used
     double** buffers = calloc(numprocs, sizeof(double*));
 
-    stack* work_stack = new_stack();
+    stack* workStack = new_stack();
 
     double initial[2] = { A, B };
     MPI_Send(initial ,2, MPI_DOUBLE, 1, TAG_WORK, MPI_COMM_WORLD);
@@ -160,10 +174,10 @@ double farmer(int numprocs) {
             MPI_Recv(data, 3, MPI_DOUBLE, MPI_ANY_SOURCE, TAG_MORE, MPI_COMM_WORLD, &status);
 
             double lhs[2] = {data[0], data[1]};
-            push(lhs, work_stack);
+            push(lhs, workStack);
 
             double rhs[2] = {data[1], data[2]};
-            push(rhs, work_stack);
+            push(rhs, workStack);
         }
         //as a task has sent some data, it no longer has any work to do and so
         //can be flagged as not working
@@ -174,12 +188,12 @@ double farmer(int numprocs) {
         free(buffers[status.MPI_SOURCE]);
         buffers[status.MPI_SOURCE] = NULL; //avoids having to remember which are free
 
-        if ( numWorkingTasks == 0 && is_empty(work_stack) ) {
+        if ( numWorkingTasks == 0 && is_empty(workStack) ) {
             break;
         }else{
             for ( int i = 1; i < numprocs; ++i ){
-                if ( !is_empty(work_stack) && !workingTasks[i] ){
-                    double* work = buffers[i] = pop(work_stack);
+                if ( !is_empty(workStack) && !workingTasks[i] ){
+                    double* work = buffers[i] = pop(workStack);
 
                     ++numWorkingTasks;
                     ++tasks_per_process[i];
@@ -195,6 +209,7 @@ double farmer(int numprocs) {
     }
     free(buffers);
     free(workingTasks);
+    free_stack(workStack);
 
     //when the task has finished we need to send a command to the workers for
     //them to halt.
