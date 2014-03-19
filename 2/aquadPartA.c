@@ -11,7 +11,7 @@
  * different sized data is sent between processes so that it is required to get the
  * type of the message before it is possible to know how much data to receive (i.e.
  * what the count argument needs to be for MPI_Recv). This could have been worked around
- * by padding the data sent with TAG_RESULT but that seemed inelegant. The blocking versions
+ * by padding the data sent but that seemed inelegant. The blocking versions
  * were used as using the non blocking versions wouldn't have given any advantage. They would
  * have had to busy wait which is worse than blocking.
  *
@@ -22,10 +22,10 @@
  *
  * This means that it is impossible to send back multiple messages from the worker (as doing so would
  * invalidate the assumption above). So in the case where two tasks need to be spawned rather than sending
- * two request for more work containing (left, mid) and (mid, right) a single message is sent. This message
- * contains (left, mid, right) and is is a requirement of the farmer to split the message and add tasks.
- * This has a slightly lower overhead (3 doubles need to be sent as opposed to 4) and leads to a much simpler
- * (although slightly less generic) design.
+ * two request for more work containing (left, mid) and (mid, right) a single message is sent. As the
+ * worker knows the left and right sent to the process (as it still has the buffer) the worker 
+ * doesn't need to send anything back other than an empty message saying that more work needs to be allocated.
+ * This seemed to be faster than sending three items of data back.
  *
  *
  * Until all workers complete the farmer waits for the data from any worker.
@@ -69,12 +69,12 @@
  * for no gain.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <mpi.h>
 #include <time.h>
+#include <unistd.h>
 #include <stdbool.h>
 #include "stack.h"
 
@@ -88,10 +88,13 @@
 
 #define FARMER_ID 0
 
-#define TAG_HALT 1 //Sent from farmer to workers when needed to halt
-#define TAG_WORK 2 //Send from farmer to workers with work to do
-#define TAG_MORE 3 //Sent from workers to the farmer with more tasks to do
-#define TAG_RESULT 4 //Sent from workers to farmers with a partial result
+
+enum Tags {
+    TAG_HALT,  //Sent from farmer to workers when needed to halt
+    TAG_WORK,  //Send from farmer to workers with work to do
+    TAG_MORE,  //Sent from workers to the farmer with more tasks to do
+    TAG_RESULT //Sent from workers to farmers with a partial result
+};
 
 typedef struct {
     double* buffer;
@@ -152,13 +155,19 @@ double farmer(int numprocs) {
 
     int numWorkingTasks = 0;
 
-    WorkerData* tasks = calloc(numprocs, sizeof(WorkerData))
-
+    WorkerData* tasks = calloc(numprocs, sizeof(WorkerData));
     stack* workStack = new_stack();
 
-    double initial[2] = { A, B };
+    //allocating on the heap allows the use of free later on without any aditional checks,
+    //small cost for much code simplicity.
+    double* initial = malloc(2 * sizeof(double));
+    initial[0] = A;
+    initial[1] = B;
+
+    //send initial task so that MPI_Probe gets some data
     MPI_Send(initial, 2, MPI_DOUBLE, 1, TAG_WORK, MPI_COMM_WORLD);
     tasks[1].isWorking = true;
+    tasks[1].buffer = initial;
     ++numWorkingTasks;
 
     while ( true ){
@@ -177,7 +186,6 @@ double farmer(int numprocs) {
 
             double lhs[2] = {buffer[0], mid};
             push(lhs, workStack);
-
             double rhs[2] = {mid, buffer[1]};
             push(rhs, workStack);
         }
@@ -194,7 +202,7 @@ double farmer(int numprocs) {
             break;
         }else{
             for ( int i = 1; i < numprocs; ++i ){
-                if ( !is_empty(workStack) && !workingTasks[i] ){
+                if ( !is_empty(workStack) && !tasks[i].isWorking ){
                     double* work = tasks[i].buffer = pop(workStack);
 
                     ++numWorkingTasks;
