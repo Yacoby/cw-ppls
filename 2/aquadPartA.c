@@ -93,6 +93,11 @@
 #define TAG_MORE 3 //Sent from workers to the farmer with more tasks to do
 #define TAG_RESULT 4 //Sent from workers to farmers with a partial result
 
+typedef struct {
+    double* buffer;
+    bool isWorking;
+} WorkerData;
+
 int* tasks_per_process;
 
 double farmer(int);
@@ -147,17 +152,13 @@ double farmer(int numprocs) {
 
     int numWorkingTasks = 0;
 
-    //holds if a process is working on something
-    bool* workingTasks = calloc(numprocs, sizeof(bool));
-
-    //holds the buffers so that non blocking commands can be used
-    double** buffers = calloc(numprocs, sizeof(double*));
+    WorkerData* tasks = calloc(numprocs, sizeof(WorkerData))
 
     stack* workStack = new_stack();
 
     double initial[2] = { A, B };
-    MPI_Send(initial ,2, MPI_DOUBLE, 1, TAG_WORK, MPI_COMM_WORLD);
-    workingTasks[1] = true;
+    MPI_Send(initial, 2, MPI_DOUBLE, 1, TAG_WORK, MPI_COMM_WORLD);
+    tasks[1].isWorking = true;
     ++numWorkingTasks;
 
     while ( true ){
@@ -169,35 +170,36 @@ double farmer(int numprocs) {
             MPI_Recv(&partialResult, 1, MPI_DOUBLE, MPI_ANY_SOURCE, TAG_RESULT, MPI_COMM_WORLD, &status);
             totalArea += partialResult;
         }else{
-            //get more work from the worker, in the form (left, mid, right)
-            double data[3];
-            MPI_Recv(data, 3, MPI_DOUBLE, MPI_ANY_SOURCE, TAG_MORE, MPI_COMM_WORLD, &status);
+            MPI_Recv(NULL, 0, MPI_DOUBLE, MPI_ANY_SOURCE, TAG_MORE, MPI_COMM_WORLD, &status);
 
-            double lhs[2] = {data[0], data[1]};
+            double* buffer = tasks[status.MPI_SOURCE].buffer;
+            double mid = (buffer[0] + buffer[1])/2;
+
+            double lhs[2] = {buffer[0], mid};
             push(lhs, workStack);
 
-            double rhs[2] = {data[1], data[2]};
+            double rhs[2] = {mid, buffer[1]};
             push(rhs, workStack);
         }
         //as a task has sent some data, it no longer has any work to do and so
         //can be flagged as not working
-        workingTasks[status.MPI_SOURCE] = false;
+        tasks[status.MPI_SOURCE].isWorking = false;
         --numWorkingTasks;
 
         //now can free work, if there isn't work this should be null
-        free(buffers[status.MPI_SOURCE]);
-        buffers[status.MPI_SOURCE] = NULL; //avoids having to remember which are free
+        free(tasks[status.MPI_SOURCE].buffer);
+        tasks[status.MPI_SOURCE].buffer = NULL; //avoids having to remember which are free
 
         if ( numWorkingTasks == 0 && is_empty(workStack) ) {
             break;
         }else{
             for ( int i = 1; i < numprocs; ++i ){
                 if ( !is_empty(workStack) && !workingTasks[i] ){
-                    double* work = buffers[i] = pop(workStack);
+                    double* work = tasks[i].buffer = pop(workStack);
 
                     ++numWorkingTasks;
                     ++tasks_per_process[i];
-                    workingTasks[status.MPI_SOURCE] = true;
+                    tasks[i].isWorking = true;
                     MPI_Isend(work, 2, MPI_DOUBLE, i, TAG_WORK, MPI_COMM_WORLD, &ignored_request);
                 }
             }
@@ -205,10 +207,9 @@ double farmer(int numprocs) {
     }
 
     for ( int i = 0; i < numprocs; ++i ){
-        free(buffers[i]);
+        free(tasks[i].buffer);
     }
-    free(buffers);
-    free(workingTasks);
+    free(tasks);
     free_stack(workStack);
 
     //when the task has finished we need to send a command to the workers for
@@ -252,8 +253,7 @@ void worker(int mypid) {
             //this is a request for two new items of work. The farmer has enough
             //domain knowledge to split up the data in to the following tasks
             //(left, mid) and (mid, right)
-            double response[3] = {left, mid, right};
-            MPI_Send(response, 3, MPI_DOUBLE, FARMER_ID, TAG_MORE, MPI_COMM_WORLD);
+            MPI_Send(NULL, 0, MPI_DOUBLE, FARMER_ID, TAG_MORE, MPI_COMM_WORLD);
         }else{
             double total = larea + rarea;
             MPI_Send(&total, 1, MPI_DOUBLE, FARMER_ID, TAG_RESULT, MPI_COMM_WORLD);
