@@ -43,12 +43,7 @@
 #define A 0.0
 #define B 5.0
 
-#define SLEEPTIME 1
-
 #define FARMER_ID 0
-
-#define TAG_WORK 0x1
-#define TAG_RESULT 0x2
 
 int* tasks_per_process;
 
