@@ -25,7 +25,7 @@
  * two request for more work containing (left, mid) and (mid, right) a single message is sent. As the
  * worker knows the left and right sent to the process (as it still has the buffer) the worker 
  * doesn't need to send anything back other than an empty message saying that more work needs to be allocated.
- * This seemed to be faster than sending three items of data back.
+ * From informal testing this seemed to be slightly faster than sending three items of data back.
  *
  *
  * Until all workers complete the farmer waits for the data from any worker.
@@ -158,22 +158,22 @@ double farmer(int numprocs) {
     WorkerData* tasks = calloc(numprocs, sizeof(WorkerData));
     stack* workStack = new_stack();
 
-    //allocating on the heap allows the use of free later on without any additional checks,
-    //small cost for extra code simplicity.
-    double* initial = malloc(2 * sizeof(double));
-    initial[0] = A;
-    initial[1] = B;
+    double initial[2] = {A,B};
+    push(initial, workStack);
 
-    //send initial task to a worker so that MPI_Probe gets some data
-    //this allows simplicity in that it allows for a blocking MPI_Probe which avoids busy waiting
-    //TODO this could do with being pulled out into a new method as it is duplicated code
-    MPI_Send(initial, 2, MPI_DOUBLE, 1, TAG_WORK, MPI_COMM_WORLD);
-    tasks[1].isWorking = true;
-    tasks[1].buffer = initial;
-    ++tasks_per_process[1];
-    ++numWorkingTasks;
+    while ( numWorkingTasks != 0 || !is_empty(workStack) ){
 
-    while ( true ){
+        for ( int i = 1; i < numprocs; ++i ){
+            if ( !is_empty(workStack) && !tasks[i].isWorking ){
+                double* work = tasks[i].buffer = pop(workStack);
+
+                ++numWorkingTasks;
+                ++tasks_per_process[i];
+                tasks[i].isWorking = true;
+                MPI_Isend(work, 2, MPI_DOUBLE, i, TAG_WORK, MPI_COMM_WORLD, &ignored_request);
+            }
+        }
+
         //probe must be used to work out which tag (and so how much data) is going to be received
         MPI_Status status;
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
@@ -201,21 +201,6 @@ double farmer(int numprocs) {
         //now can free work, if there isn't work this should be null and so is fine to free
         free(tasks[status.MPI_SOURCE].buffer);
         tasks[status.MPI_SOURCE].buffer = NULL; //avoids having to remember which are free
-
-        if ( numWorkingTasks == 0 && is_empty(workStack) ) {
-            break;
-        }else{
-            for ( int i = 1; i < numprocs; ++i ){
-                if ( !is_empty(workStack) && !tasks[i].isWorking ){
-                    double* work = tasks[i].buffer = pop(workStack);
-
-                    ++numWorkingTasks;
-                    ++tasks_per_process[i];
-                    tasks[i].isWorking = true;
-                    MPI_Isend(work, 2, MPI_DOUBLE, i, TAG_WORK, MPI_COMM_WORLD, &ignored_request);
-                }
-            }
-        }
     }
 
     for ( int i = 0; i < numprocs; ++i ){
