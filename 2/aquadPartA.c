@@ -158,19 +158,23 @@ double farmer(int numprocs) {
     WorkerData* tasks = calloc(numprocs, sizeof(WorkerData));
     stack* workStack = new_stack();
 
-    //allocating on the heap allows the use of free later on without any aditional checks,
-    //small cost for much code simplicity.
+    //allocating on the heap allows the use of free later on without any additional checks,
+    //small cost for extra code simplicity.
     double* initial = malloc(2 * sizeof(double));
     initial[0] = A;
     initial[1] = B;
 
-    //send initial task so that MPI_Probe gets some data
+    //send initial task to a worker so that MPI_Probe gets some data
+    //this allows simplicity in that it allows for a blocking MPI_Probe which avoids busy waiting
+    //TODO this could do with being pulled out into a new method as it is duplicated code
     MPI_Send(initial, 2, MPI_DOUBLE, 1, TAG_WORK, MPI_COMM_WORLD);
     tasks[1].isWorking = true;
     tasks[1].buffer = initial;
+    ++tasks_per_process[1];
     ++numWorkingTasks;
 
     while ( true ){
+        //probe must be used to work out which tag (and so how much data) is going to be received
         MPI_Status status;
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
@@ -194,7 +198,7 @@ double farmer(int numprocs) {
         tasks[status.MPI_SOURCE].isWorking = false;
         --numWorkingTasks;
 
-        //now can free work, if there isn't work this should be null
+        //now can free work, if there isn't work this should be null and so is fine to free
         free(tasks[status.MPI_SOURCE].buffer);
         tasks[status.MPI_SOURCE].buffer = NULL; //avoids having to remember which are free
 
@@ -258,9 +262,8 @@ void worker(int mypid) {
         double lrarea = (fleft + fright) * ((right - left)/2);
 
         if( fabs((larea + rarea) - lrarea) > EPSILON ) {
-            //this is a request for two new items of work. The farmer has enough
-            //domain knowledge to split up the data in to the following tasks
-            //(left, mid) and (mid, right)
+            //send the fact that the result should be split back to the farmer. The farmer knows
+            //what was sent to the worker and so is capable of dividing up the data
             MPI_Send(NULL, 0, MPI_DOUBLE, FARMER_ID, TAG_MORE, MPI_COMM_WORLD);
         }else{
             double total = larea + rarea;
